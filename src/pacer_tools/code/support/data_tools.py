@@ -697,7 +697,7 @@ def standardize_recap_date(tdate):
     except AttributeError:
         return None
 
-def get_recap_parties(rparties):
+def get_recap_parties(rparties, recap_id):
     with open(settings.ROLE_MAPPINGS, 'r') as f:
         mappings = json.load(f)
     parties = []
@@ -707,8 +707,10 @@ def get_recap_parties(rparties):
     potentially_broken_names = []
     for lawyer in [x for rparty in rparties for x in rparty['attorneys']]:
         if lawyer['name'] in all_lawyer_names:
-            roles_raw = [x['role_raw'] for x in lawyer['roles']]
-            if len(set(roles_raw))>1: # if there's just one possible value for the text field, then it doesn't matter if it was copied
+            # # see comment further down about lawyer['roles'] change
+            # roles_raw = [x['role_raw'] for x in lawyer['roles']]
+            # if len(set(roles_raw))>1:
+            if len(set(lawyer['roles']))>1: # if there's just one possible value for the text field, then it doesn't matter if it was copied
                 potentially_broken_names.append(lawyer['name']) # otherwise, flag this lawyer
         else:
             all_lawyer_names.append(lawyer['name'])
@@ -750,34 +752,37 @@ def get_recap_parties(rparties):
                 info_lines = [x for x in [lawyer_line_cleaner(y) for y in contact_raw.split('\n')] if x and 'PRO SE' not in x]
                 office, address, phone, fax, email = parse_lawyer_extra_info(info_lines)
                 if office and is_pro_se and lawyer_name==rparty['name']:
-                    extra_pro_se_info = office
+                    # extra_pro_se_info = office
                     office = None
             else:
                 office, address, phone, fax, email = [None]*5
 
-            designation, bar_status, trial_bar_status, tdate = [None]*4
-            is_lead, is_pro_hac, is_notice, see_above = [False]*4
-            # trial bar status appears in the contact info, so it's not subject to the counsel errors (although it only appears in ILND)
-            if contact_raw and any(x in contact_raw for x in ['Trial Bar Status', 'Trial bar Status']):
-                trial_bar_status = re.search('tatus: ([A-Za-z \'\-]{1,100})', contact_raw).group(1)
+            # # (apr '25) missing lawyer['roles'] prompted me to dig into & ultimately comment out the below code
+            # # (maybe recap's current 'role' with numerical codes is new?) 
+            # designation, bar_status, trial_bar_status, tdate = [None]*4
+            # is_lead, is_pro_hac, is_notice, see_above = [False]*4
+            # # trial bar status appears in the contact info, so it's not subject to the counsel errors (although it only appears in ILND)
+            # if contact_raw and any(x in contact_raw for x in ['Trial Bar Status', 'Trial bar Status']):
+            #     trial_bar_status = re.search('tatus: ([A-Za-z \'\-]{1,100})', contact_raw).group(1)
 
-            if not recap_counsel_error:
-                full_lawyer_string = str(lawyer)
-                # easy non-lawyer-block fields
-                is_lead = 'LEAD ATTORNEY' in full_lawyer_string
-                is_notice = 'ATTORNEY TO BE NOTICED' in full_lawyer_string
-                is_pro_hac = 'PRO HAC VICE' in full_lawyer_string
-                see_above = 'above for address' in full_lawyer_string
+            # if not recap_counsel_error:
+                # full_lawyer_string = str(lawyer)
+                # # easy non-lawyer-block fields
+                # is_lead = 'LEAD ATTORNEY' in full_lawyer_string
+                # is_notice = 'ATTORNEY TO BE NOTICED' in full_lawyer_string
+                # is_pro_hac = 'PRO HAC VICE' in full_lawyer_string
+                # see_above = 'above for address' in full_lawyer_string
 
-                # slightly trickier fields (pretty sure designation & bar status don't show up in recap, but they're included just in case)
-                if 'Designation' in full_lawyer_string:
-                    designation = re.search('Designation: ([A-Za-z \'\-]{1,100})', full_lawyer_string).group(1)
-                elif 'Bar Status' in full_lawyer_string:
-                    bar_status = re.search('tatus: ([A-Za-z \'\-]{1,100})', full_lawyer_string).group(1)
-                # there is almost always only one terminating date (sans counsel errors), so just take the first one we encounter
-                for role in lawyer['roles']:
-                    if 'TERMINATED' in role['role_raw']:
-                        tdate = role['role_raw'].split('TERMINATED: ')[1]
+                # # slightly trickier fields (pretty sure these don't show up in recap, but they're included just in case)
+                # if 'Designation' in full_lawyer_string:
+                #     designation = re.search('Designation: ([A-Za-z \'\-]{1,100})', full_lawyer_string).group(1)
+                # if 'Bar Status' in full_lawyer_string:
+                #     bar_status = re.search('tatus: ([A-Za-z \'\-]{1,100})', full_lawyer_string).group(1)
+                    
+                # # there is almost always only one terminating date (sans counsel errors), so just take the first one we encounter
+                # for role in lawyer['roles']:
+                #     if 'TERMINATED' in role['role_raw']:
+                #         tdate = role['role_raw'].split('TERMINATED: ')[1]
 
             # append this particular lawyer's info
             lawyer_list.append({
@@ -788,30 +793,37 @@ def get_recap_parties(rparties):
                     'phone': phone,
                     'fax': fax,
                     'email': email,
-                    'terminating_date': tdate,
+                    'terminating_date': False, # (apr '25) not present in recap, according to inspection of 10k test cases
                     'is_pro_se': is_pro_se,
                     'raw_info': contact_raw
                 },
-                'is_lead_attorney': is_lead,
-                'is_pro_hac_vice': is_pro_hac,
-                'is_notice_attorney': is_notice,
-                'has_see_above': see_above,
-                'designation': designation,
-                'bar_status': bar_status,
-                'trial_bar_status': trial_bar_status
+                # (apr '25) see github.com/freelawproject/courtlistener/blob/main/cl/people_db/models.py for role codes
+                'is_lead_attorney': 2 in lawyer['roles'],
+                'is_pro_hac_vice': 4 in lawyer['roles'],
+                'is_notice_attorney': 1 in lawyer['roles'],
+                'has_see_above': False # (apr '25) i'm pulling case-agnostic info from the lawyer endpoint, so never any "see above"
+                # # (apr '25) recap omits the below info (github.com/freelawproject/courtlistener/blob/main/cl/lib/pacer.py line 291)
+                # 'designation': designation,
+                # 'bar_status': bar_status,
+                # 'trial_bar_status': trial_bar_status
             })
 
         # role & party_type
-        if not recap_party_error:
-            rtitle = party_types[0]['name']
-            if rtitle not in mappings.keys():
-                party_title = rtitle
-                party_type = 'misc'
-            else:
-                party_title = mappings[rtitle]['title']
-                party_type = mappings[rtitle]['type']
+        if recap_id is None:
+            print('WARNING: recap_id is None')
+        party_types_subset = [x for x in party_types if x['docket_id']==recap_id]
+        if len(party_types_subset)>1:
+            print('WARNING: len(party_types_subset)>1')
+        # if not recap_party_error:
+        rtitle = party_types_subset[0]['name']
+        if rtitle not in mappings.keys():
+            party_title = rtitle
+            party_type = 'misc'
         else:
-            party_title, party_type = [None]*2
+            party_title = mappings[rtitle]['title']
+            party_type = mappings[rtitle]['type']
+        # else:
+        #     party_title, party_type = [None]*2
 
         # finish adding party fields
         new_party['counsel'] = lawyer_list
@@ -822,7 +834,7 @@ def get_recap_parties(rparties):
 
     return parties
 
-def get_recap_docket(court, docket_entries):
+def get_recap_docket(court, docket_entries, reverse=False):
     '''
     Remap the recap docket
     Inputs:
@@ -832,9 +844,9 @@ def get_recap_docket(court, docket_entries):
         - list of docket entries same as parsed format
     '''
 
-    def _get_doc_links(row):
+    def _get_doc_data(row):
         ''' Get links to documents (most rows don't have attachments, some do)'''
-        documents = {}
+        documents, descs = {}, []
         for doc in row.get('recap_documents', []):
 
             # Recap encodes document_type=1 for line doc and document_type=2 for attachment
@@ -848,23 +860,37 @@ def get_recap_docket(court, docket_entries):
 
             document_data = {
                 'url': ftools.get_pacer_url(court,'doc_link') + '/' + str(doc['pacer_doc_id']), 'span': {},
-                **{f"recap_{k}": doc[k] for k in ('page_count','filepath_ia', 'filepath_local', 'description', 'is_available')}
+                **{f"recap_{k}": doc[k] for k in (
+                    ('page_count','filepath_ia', 'filepath_local', 'is_available') if doc['is_available'] else ('is_available',))}
             }
             documents[ind] = document_data
-        return documents
+            desc = doc['description']
+            if desc:
+                descs.append(desc)
 
-    rows = [
-        {'date_filed': standardize_recap_date(row['date_filed']),
-         'ind': str(row['entry_number'] or ''),
-         'docket_text': row['description'],
-         'documents': _get_doc_links(row),
-         'edges': []
-        }
-        for row in docket_entries
-    ]
-    return rows
+        return documents, descs
 
-def remap_recap_data(recap_fpath=None, rjdata=None):
+    rows = []
+    for row in docket_entries:
+        doc_data, descs = _get_doc_data(row)
+        desc = None
+        if not row['description'] and descs:
+            if not (len(descs)==1 or (len(descs)==2 and any(x in descs[1] for x in (
+                    'Notice Recipients', 'Certificate of Service', 'Service List', 'trc')))):
+                print(f"WARNING: discarding short descriptions of attachments — {descs[1:]}")
+            desc = descs[0]
+        if row['description'] or desc:
+            rows.append({
+                'date_filed': standardize_recap_date(row['date_filed']),
+                'ind': str(row['entry_number'] or ''),
+                'docket_text': row['description'],
+                'description_short': desc,
+                'documents': doc_data,
+                'edges': []
+            })
+    return rows[::(-1 if reverse else 1)]
+
+def remap_recap_data(recap_fpath=None, rjdata=None, parse_non_cv=False):
     '''
     Converts a Recap-style case JSON to a SCALES-style case JSON
     Input: a path to a Recap file (recap_fpath), or the JSON object itself (rjdata)
@@ -877,7 +903,7 @@ def remap_recap_data(recap_fpath=None, rjdata=None):
             recap_fpath = std_path(recap_fpath)
             jpath = settings.PROJECT_ROOT / recap_fpath
             rjdata = json.load(open(jpath))
-    except:
+    except Exception as e:
         print(f"Error loading file {recap_fpath}")
         return {}
 
@@ -885,22 +911,27 @@ def remap_recap_data(recap_fpath=None, rjdata=None):
     tdate = standardize_recap_date(rjdata['date_terminated'])
     case_status = 'closed' if tdate else 'open'
     judge = rjdata['assigned_to_str'] if rjdata['assigned_to_str'] and rjdata['assigned_to_str']!='Unassigned' else None
+    case_ucid = ucid(rjdata['court'], ftools.clean_case_id(rjdata['docket_number']), clean=True)
+    if case_ucid=='neb;;' or re.match('insb;;0:\d{2}-bk-[a-z]{3}\d{2}', case_ucid):
+        case_ucid = case_ucid.split(';;')[0] + f";;0:noyear-bk-noid{rjdata['id']}" # these situations are rare enough that i'm ok with the 'noyear'/'noid' ugliness
 
-    case_type = rjdata['docket_number'].split('-')[1] if rjdata['docket_number'] else None
-    if case_type == 'cv':
+    case_type = case_ucid.split('-')[1]
+    if case_type == 'cv' or parse_non_cv:
         # Convert the data
         fdata = {
             'appeals_case_ids': [],
             'case_flags': [],
-            'case_id': ftools.clean_case_id(rjdata['docket_number']),
+            'case_id': rjdata['docket_number'] or None, # no longer using clean_case_id here, in order to preserve the varying original formats of bankruptcy case ids
             'case_name': rjdata['case_name'] or None,
             'case_pacer_id': None,
             'case_status': case_status,
             'case_type': case_type,
             'cause': rjdata['cause'] or None,
             'city': None,
-            'court': rjdata['court'] or None,
-            'docket': get_recap_docket(rjdata['court'], rjdata['docket_entries']),
+            'court': (rjdata['court'].strip('/').split('/')[-1] if 'http' in rjdata['court'] else rjdata['court']) if rjdata['court'] else None,
+            'docket': get_recap_docket(rjdata['court'], rjdata[
+                'docket_entries' if 'docket_entries' in rjdata else 'docket'], reverse=True), # (apr '25) slight difference in Scott's scrape code;
+            # also, turning on reverse=True for bankruptcy scraping, but i'm not sure if that'll be correct for future scrape jobs
             'filed_in_error_text': None,
             'filing_date': standardize_recap_date(rjdata['date_filed']),
             'header_case_id': None,
@@ -911,16 +942,16 @@ def remap_recap_data(recap_fpath=None, rjdata=None):
             'lead_case_id': None,
             'magistrate_case_ids': [],
             'monetary_demand': None,
-            'nature_suit': dei.nos_matcher(rjdata['nature_of_suit'], short_hand=True) or rjdata['nature_of_suit'],
+            'nature_suit': (dei.nos_matcher(rjdata['nature_of_suit'], short_hand=True) or rjdata['nature_of_suit']) or None,
             'other_courts': [],
-            'parties': get_recap_parties(rjdata['parties']),
+            'parties': get_recap_parties(rjdata['parties'], (rjdata['id'] or None)),
             'recap_id': rjdata['id'] or None,
             'referred_judges': [rjdata['referred_to_str']] if rjdata['referred_to_str'] else [],
             'related_cases': [],
             'terminating_date': tdate,
             'source': 'recap',
             'summary': {},
-            'ucid': ucid(rjdata['court'], ftools.clean_case_id(rjdata['docket_number'])),
+            'ucid': case_ucid,
             # MDL/Multi keys
             **{k:None for k in ['mdl_code', 'mdl_id_source', 'is_mdl', 'is_multi']},
             # Billing keys
@@ -1312,11 +1343,28 @@ def ucid(court, case_id, clean=False, allow_def_stub=True):
     Output:
         (str or Series) like 'nced;;5:16-cv-00843'
     '''
+    bk_match = re.match('(?:\d:)?(?:\d{2,3}|noyear)[:-]([a-z]{1,2}-)?(?:\d{2,5}|[a-z]{3}-\d)', case_id) # recap bankruptcy format
+    if 'http' in court: # recap returns the court as an api-endpoint url
+        court = court.strip('/').split('/')[-1]
+
     if type(case_id)==pd.Series:
         if not clean:
             return court + ';;' + case_id.map(lambda x: ftools.clean_case_id(x, allow_def_stub))
         else:
             return court + ';;' + case_id
+    elif bk_match:
+        group = bk_match.groups()[0]
+        if group:
+            typ = {'b':'bk', 'a':'ap', 's':'su'}.get(group.strip('-'), group.strip('-')) # bankruptcy court, appellate court, supreme court
+            case_id = case_id.replace(bk_match.groups()[0], '')
+        else:
+            typ = 'bk'
+        year, num = case_id.rsplit(('-' if '-' in case_id and not any(x.isalpha() for x in case_id[1:]) else ':'),1)
+        district, year = year.split(':') if ':' in year else (None, year)
+        if len(year)==3: # one annoying recap edge case
+            year = year[1:]
+        zero_padding = '0'*(5-len(num)) if len(num)<5 else ''
+        return f"{court};;{district if district else '0'}:{year}-{typ}-{zero_padding}{num.replace('-',('0' if len(num)==5 else ''))}"
     else:
         if not clean:
             clean_case_id = ftools.clean_case_id(case_id, allow_def_stub)

@@ -175,6 +175,29 @@ def clean_case_id(case_no, allow_def_stub=False, lower_type=False):
     Outputs:
         (str) cleaned standardised name
     '''
+
+    # recap-bankruptcy edge cases
+    case_no = case_no.lower().replace('j:', 'J:') # carveout for (non-bk) mied judicial review cases
+    case_no = case_no.split(',')[0] if not re.match('no\. [0-9,]+', case_no) else case_no.replace(',', '')
+    if 'nos.' in case_no and ';' not in case_no:
+        case_no = case_no.split('-')[0]
+    for word in ('no.', 'nos.', 'number', 'bankruptcy'):
+        case_no = case_no.split(word)[-1]
+    case_no = case_no.strip(': ')
+    case_no = case_no.replace(' ','-')
+
+    match_for_suffix_removal = re.match('[a-z]+-\d{2}-\d+', case_no)
+    if match_for_suffix_removal:
+        parts = match_for_suffix_removal.group().split('-')
+        case_no = f'{parts[1]}-{parts[0]}-{parts[2]}'
+    if re.match('\d{4,5}$', case_no):
+        case_no = f"noyear:{0 if len(case_no)==4 else ''}{case_no}" # this situation is rare enough that i'm ok with the 'noyear' ugliness
+    elif re.match('\d{7}$', case_no):
+        case_no = f'{case_no[:2]}:{case_no[2:]}'
+    case_no = case_no.replace(';','-').replace('(','-')
+    if re.match('\d{2,}-\d+-.+', case_no):
+        case_no = '-'.join(case_no.split('-')[:2])
+
     case_no = colonize(case_no)
     try:
         case = decompose_caseno(case_no)
