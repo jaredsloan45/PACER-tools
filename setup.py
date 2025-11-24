@@ -12,7 +12,7 @@ long_description = (base_dir / "README.md").read_text()
 
 setup(
 	name='pacer-tools',
-	version='0.1.11',
+	version='0.1.12',
     long_description=long_description,
     long_description_content_type='text/markdown',
 	package_dir={'': 'src'},
@@ -24,11 +24,13 @@ setup(
         'cssselect', 'feedparser', 'filelock', 'future', 
         'geonamescache', 'h11', 'html5lib', 'idna',
         'lxml', 'numpy', 'outcome', 'pandas', 'pathlib', 
-        'probableparsing', 'pycparser', 'pyOpenSSL', 'PySocks', 
+        'probableparsing', 'pycparser', # 'pymongo',
+        'pyOpenSSL', 'PySocks', 
         'python-crfsuite', 'python-dateutil', 'python-dotenv', 
-        'python-Levenshtein', 'pytz', 'requests', 
+        'python-Levenshtein', 'pytz', 'rdflib', 'requests', 
         'requests-file', 'scipy', 'selenium', 
-        'selenium-requests', 'sgmllib3k', 'six', 'sniffio', 
+        'selenium-requests', 'sgmllib3k', 'simplejson',
+        'six', 'sniffio', 
         'sortedcontainers', 'soupsieve', 'tldextract', 
         'tqdm', 'trio', 'trio-websocket', 'urllib3', 
         'urllib3-secure-extra', 'usaddress', 'webencodings', 
@@ -41,7 +43,7 @@ setup(
 	},
     data_files=[
         ('pacer_tools', glob('src/pacer_tools/code/support/core_data/*')),
-        ('pacer_tools', glob('src/pacer_tools/data/annotation/*'))
+        ('pacer_tools', glob('src/pacer_tools/data/*'))
     ],
     include_package_data = True,
 )

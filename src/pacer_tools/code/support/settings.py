@@ -5,70 +5,39 @@ Description: Settings file
 '''
 import sys
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 
-# Root
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Data
-DATAPATH = PROJECT_ROOT / 'data'
 CORE_DATA = PROJECT_ROOT / 'code'/ 'support' / 'core_data'
-BUNDLES = DATAPATH / 'bundles'
-PACER_PATH = DATAPATH / 'pacer'
-RECAP_PATH =  DATAPATH / 'recap'
-FJC =  DATAPATH / 'fjc'
-IDB = FJC / 'idb'
-SENTENCING_COMMISSION = DATAPATH / 'sentencing-commission'
-EDGAR = DATAPATH / 'annotation' / 'edgar_ciks.csv'
-CENSUS_CITIES = DATAPATH / 'annotation' / 'census_SUB-EST2020_ALL.csv'
-UNIQUE_FILES_TABLE = DATAPATH / 'unique_docket_filepaths_table.csv'
+DATAPATH = PROJECT_ROOT / 'data'
+ANNO_PATH = DATAPATH / 'annotation'
+PACER_PATH = DATAPATH / 'pacer' # generate using scrapers.py
 
-# Scraper Files
-MEM_DF = PROJECT_ROOT / 'code' / 'downloader' / 'member_cases.csv'
-LOG_DIR = PROJECT_ROOT / 'code' / 'downloader' / 'logs'
-
-# Parser Files
-MEMBER_LEAD_LINKS = DATAPATH / 'annotation' / 'member_lead_links.jsonl'
-ROLE_MAPPINGS = DATAPATH / 'annotation' / 'role_mappings.json'
-
-# Annotation Files
 COURTFILE = CORE_DATA / 'district_courts.csv'
-JUDGEFILE = CORE_DATA / 'judge_demographics.csv'
-JUDGEFILES_DIR = DATAPATH / 'annotation' / 'fjc_article_iii_biographical_directory'
-STATEY2CODE = CORE_DATA / 'statey2code.json'
 DISTRICT_COURTS_94 = CORE_DATA / 'district_courts_94.csv'
+STATEY2CODE = CORE_DATA / 'statey2code.json'
 NATURE_SUIT = CORE_DATA / 'nature_suit.csv'
-EXCLUDE_CASES = DATAPATH / 'exclude.csv'
-FLAGS_DF = DATAPATH / 'annotation' / 'case_flags.csv'
-RECAP_ID_DF = DATAPATH / 'annotation' / 'recap_id2ucid.csv'
-
-DIR_SEL = DATAPATH / 'annotation' / 'SEL_DIR'
-JEL_JSONL = DATAPATH / 'annotation' / 'JEL_Nov21.jsonl'
-
-# Counsel/Firm Disambiguations
-COUNSEL_DIS_DIR = DATAPATH / 'annotation' / 'Counsel_Disambiguations'
-COUNSEL_DIS_CLUSTS = DATAPATH / 'annotation' / 'Counsel_Clusters.jsonl'
-
-FIRM_DIS_DIR = DATAPATH / 'annotation' / 'Firm_Disambiguations'
-FIRM_DIS_CLUSTS = DATAPATH / 'annotation' / 'Firm_Clusters.jsonl'
-
-AMLAW_100 = DATAPATH / 'annotation' / 'amlaw_top_100.csv'
-HYBRID_FIRMS = DATAPATH / 'annotation' / 'hybrid_firm_list.csv'
-
-# Party Disambiguations
-PARTY_DIS_DIR = DATAPATH / 'annotation' / 'Party_Disambiguations'
-PARTY_DIS_CLUSTS = DATAPATH / 'annotation' / 'Party_Clusters.jsonl'
-
+JUDGEFILE = CORE_DATA / 'judge_demographics.csv'
 BAMAG_JUDGES = CORE_DATA / 'brmag_judges.csv'
 BAMAG_POSITIONS = CORE_DATA / 'brmag_positions.csv'
 
-# Misc
-CTYPES = {'cv':'civil', 'cr':'criminal' }
-STYLE = PROJECT_ROOT / 'code' / 'support' / 'style'
+MEM_DF = DATAPATH / 'member_cases.csv'
+LOG_DIR = DATAPATH / 'logs'
+EXCLUDE_CASES = DATAPATH / 'exclude.csv'
+UNIQUE_FILES_TABLE = DATAPATH / 'unique_docket_filepaths_table.csv' # generate using generate_unique_filepaths in data_tools.py
+FJC =  DATAPATH / 'fjc' # generate using fjc.gov/research/idb and fjc_functions.py
 
-# Dev
-SETTINGS_DEV = Path(__file__).parent / 'settings_dev.py'
-if SETTINGS_DEV.exists():
-    from support.settings_dev import *
+MEMBER_LEAD_LINKS = ANNO_PATH / 'member_lead_links.jsonl'
+ROLE_MAPPINGS = ANNO_PATH / 'role_mappings.json'
+JEL_JSONL = ANNO_PATH / 'judge_disambiguation' / 'JEL.jsonl' # generate using the Research-Materials repo
+ONTOLOGY_LABELS = ANNO_PATH / 'ontology' / 'labels.csv' # generate using the scales-nlp repo
+
+ANNO_PATH_CLAYTON = ANNO_PATH / 'counties' / 'ga_clayton'
+NIBRS_CATEGORIES_CLAYTON = ANNO_PATH_CLAYTON / 'nibrs' / 'nibrs_categories.csv'
+NIBRS_CROSSWALK_CLAYTON = ANNO_PATH_CLAYTON / 'nibrs' / 'nibrs_crosswalk.csv'
+
+# included on behalf of make_graph_data_pacer.py
+# (in infrastructure_dev, this is a dev/prod switch, but it's not included here because pacer-tools is always prod)
+use_datastore = lambda path: path
