@@ -2,9 +2,9 @@
 References to IFP data have been commented out for the PACER-tools version of this script,
 our assumption being that anyone with the credentials needed to access our IFP data on Mongo
 would simply download our already-generated graph files rather than running this script
-(and that anyone hoping to convert new IFP data to RDF would modify this script to read from
-a flat file rather than use our admittedly-convoluted legacy Mongo system). If we're
-incorrect about this assumption, feel free to contact us at engineering@scales-okn.org.
+(and that anyone hoping to convert new IFP data to RDF would use the --ifp-filepath option
+rather than use our admittedly-convoluted legacy Mongo system). If we're incorrect about
+this assumption, feel free to contact us at engineering@scales-okn.org.
 """
 
 import ast

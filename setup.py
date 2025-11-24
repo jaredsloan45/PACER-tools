@@ -1,6 +1,7 @@
 # to update the pypi package:
+# (1) rm -r build dist (not strictly necessary, but prevents superfluous uploads of old versions)
 # (1) iterate the version in this file
-# (2) python setup.py bdist_wheel --universal
+# (2) python setup.py bdist_wheel --universal (check.warn(importable) can be ignored if data_files takes care of the directories in question)
 # (3) twine upload dist/* (requires pypi credentials)
 
 from setuptools import setup, find_packages
@@ -42,8 +43,10 @@ setup(
 		],
 	},
     data_files=[
-        ('pacer_tools', glob('src/pacer_tools/code/support/core_data/*')),
-        ('pacer_tools', glob('src/pacer_tools/data/*'))
+        ('pacer_tools', glob('src/pacer_tools/code/support/core_data/*.*')),
+        ('pacer_tools', glob('src/pacer_tools/data/*.*')),
+        ('pacer_tools', glob('src/pacer_tools/data/annotation/*.*')),
+        ('pacer_tools', glob('src/pacer_tools/data/annotation/counties/ga_clayton/nibrs/*.*')),
     ],
     include_package_data = True,
 )
